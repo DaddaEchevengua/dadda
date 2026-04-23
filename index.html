@@ -94,7 +94,7 @@
   
   /* Canal breakdown */
   .canal-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .canal-name { font-size: 13px; color: var(--text); width: 90px; flex-shrink: 0; }
+  .canal-name { font-size: 13px; color: var(--text); width: 120px; flex-shrink: 0; }
   .canal-bar-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
   .canal-bar { height: 100%; background: var(--green); border-radius: 3px; transition: width .5s; }
   .canal-val { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); width: 50px; text-align: right; }
@@ -259,7 +259,7 @@
   }
 
   /* MONTHLY CHART */
-  .chart-wrap { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 8px; }
+  .chart-wrap { display: flex; align-items: flex-end; gap: 6px; padding-top: 8px; }
   .chart-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; gap: 4px; }
   .chart-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; }
   .chart-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height .5s cubic-bezier(.4,0,.2,1); min-height: 2px; position: relative; cursor: default; }
@@ -302,8 +302,10 @@
       <button class="nav-btn" onclick="showView('inventory')">Inventário</button>
       <button class="nav-btn" onclick="showView('relatorios')">Relatórios</button>
       <button class="nav-btn" onclick="showView('metas')">Metas</button>
+      <button class="nav-btn" onclick="showView('gastos')">Gastos</button>
     </nav>
     <div class="header-actions">
+      <button class="add-btn-secondary" onclick="openSettings()" title="Configurações da loja">⚙ Config</button>
       <button class="add-btn-secondary" onclick="exportBackup()" title="Exportar todos os dados como backup">↓ Backup</button>
       <label class="add-btn-secondary" style="cursor:pointer" title="Restaurar dados de um backup">
         ↑ Importar
@@ -321,15 +323,27 @@
       <!-- Extra KPIs row -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px" id="kpi2-grid"></div>
       <div class="dash-grid">
-        <div class="dash-card">
+        <div class="dash-card" style="grid-column: 1 / -1">
           <h3>Evolução Mensal de Lucro</h3>
           <div class="chart-wrap" id="monthly-chart"></div>
         </div>
-        <div class="dash-card">
+        <div class="dash-card" style="grid-column: 1 / -1">
           <h3>Vendas por Canal</h3>
           <div id="canal-chart"></div>
         </div>
-        <div class="dash-card">
+        <div class="dash-card" style="grid-column: 1 / -1">
+          <h3>Status do Inventário</h3>
+          <div id="status-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px"></div>
+        </div>
+        <div class="dash-card" style="display:flex;flex-direction:column">
+          <h3>Top 10 — Maior Lucro</h3>
+          <div id="top-lucro" style="flex:1"></div>
+        </div>
+        <div class="dash-card" style="display:flex;flex-direction:column">
+          <h3>Compradas Recentemente (sem venda)</h3>
+          <div id="recent-estoque" style="flex:1"></div>
+        </div>
+        <div class="dash-card" style="grid-column: 1 / -1">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
             <h3 style="margin-bottom:0">⚠ Peças Paradas (+60 dias)</h3>
             <select id="alert-days-select" onchange="renderDashboard()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;padding:4px 8px;outline:none;cursor:pointer">
@@ -340,24 +354,25 @@
           </div>
           <div id="alert-list"></div>
         </div>
-        <div class="dash-card">
-          <h3>Status do Inventário</h3>
-          <div class="status-grid" id="status-grid"></div>
-        </div>
-        <div class="dash-card">
-          <h3>Top 10 — Maior Lucro</h3>
-          <div id="top-lucro"></div>
-        </div>
-        <div class="dash-card">
-          <h3>Compradas Recentemente (sem venda)</h3>
-          <div id="recent-estoque"></div>
-        </div>
         <div class="dash-card" style="grid-column: 1 / -1">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-            <h3 style="margin-bottom:0">Gastos Operacionais</h3>
-            <span id="gastos-total" style="font-family:'DM Mono',monospace;font-size:14px;color:var(--yellow)"></span>
+            <div>
+              <h3 style="margin-bottom:4px">Gastos Operacionais por Mês</h3>
+              <div style="font-size:11px;color:var(--text3)">Passe o mouse nas barras para detalhes · <span style="color:var(--accent);cursor:pointer;text-decoration:underline" onclick="showView('gastos')">Ver análise completa →</span></div>
+            </div>
+            <div style="display:flex;gap:16px;align-items:center">
+              <div style="text-align:right">
+                <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Mês Atual</div>
+                <div id="dash-gastos-mes" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:var(--yellow)">—</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Total Acumulado</div>
+                <div id="dash-gastos-total" style="font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:var(--text2)">—</div>
+              </div>
+            </div>
           </div>
-          <div id="gastos-list"></div>
+          <div id="dash-gastos-chart" style="display:flex;gap:6px;align-items:flex-end;padding-top:4px;width:100%;height:120px"></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)" id="dash-gastos-categorias"></div>
         </div>
       </div>
     </div>
@@ -482,6 +497,69 @@
       <!-- Cards de progresso -->
       <div id="metas-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
     </div>
+    <!-- GASTOS -->
+    <div id="view-gastos" class="view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--text)">GASTOS OPERACIONAIS</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Controle de custos por período e categoria</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="gastos-ano-sel" onchange="renderGastos()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 12px;outline:none;cursor:pointer"></select>
+          <button onclick="openGastoModal()" style="background:var(--green);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;border-radius:8px;border:none;cursor:pointer">+ Novo Gasto</button>
+        </div>
+      </div>
+
+      <!-- KPIs de gastos -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px" id="gastos-kpis"></div>
+
+      <!-- Gráfico mensal de gastos -->
+      <div class="dash-card" style="margin-bottom:20px">
+        <h3>Evolução Mensal de Gastos</h3>
+        <div id="gastos-chart-full" style="display:flex;gap:6px;align-items:flex-end;padding-top:4px;width:100%;height:140px"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- Breakdown por categoria -->
+        <div class="dash-card">
+          <h3>Gastos por Categoria</h3>
+          <div id="gastos-cat-breakdown"></div>
+        </div>
+        <!-- Top gastos do período -->
+        <div class="dash-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <h3 style="margin-bottom:0">Maiores Gastos do Período</h3>
+            <select id="gastos-mes-sel" onchange="renderGastos()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;padding:4px 8px;outline:none;cursor:pointer">
+              <option value="">Ano todo</option>
+            </select>
+          </div>
+          <div id="gastos-top-list"></div>
+        </div>
+      </div>
+
+      <!-- Lista completa de gastos -->
+      <div class="dash-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <h3 style="margin-bottom:0">Todos os Lançamentos</h3>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="gastos-filtro-cat" onchange="renderGastosLista()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;padding:6px 10px;outline:none;cursor:pointer">
+              <option value="">Todas as categorias</option>
+              <option value="Embalagem">Embalagem</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Ferramentas">Ferramentas</option>
+              <option value="Personalizações">Personalizações</option>
+              <option value="Outros">Outros</option>
+            </select>
+            <select id="gastos-filtro-mes" onchange="renderGastosLista()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;padding:6px 10px;outline:none;cursor:pointer">
+              <option value="">Todos os meses</option>
+            </select>
+            <span id="gastos-count" style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace"></span>
+          </div>
+        </div>
+        <div id="gastos-lista-completa"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -597,6 +675,50 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="width:580px">
+    <div class="modal-header">
+      <div class="modal-title">Configurações</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- Nome da loja -->
+    <div class="form-section">
+      <div class="form-section-title">Identidade</div>
+      <div class="form-group">
+        <label>Nome da Loja</label>
+        <input type="text" id="cfg-nome-loja" placeholder="ex: CASAMATA" maxlength="32">
+      </div>
+    </div>
+
+    <!-- Canais de venda -->
+    <div class="form-section">
+      <div class="form-section-title">Canais de Venda</div>
+      <div id="cfg-canais-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="cfg-novo-canal" placeholder="Novo canal (ex: OLX)" style="flex:1">
+        <button onclick="adicionarCanal()" style="background:var(--green);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 16px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap">+ Adicionar</button>
+      </div>
+    </div>
+
+    <!-- Categorias de gastos -->
+    <div class="form-section" style="margin-bottom:0">
+      <div class="form-section-title">Categorias de Gastos Operacionais</div>
+      <div id="cfg-cats-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="cfg-nova-cat" placeholder="Nova categoria (ex: Frete)">
+        <button onclick="adicionarCategoria()" style="background:var(--green);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;padding:10px 16px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeSettings()">Cancelar</button>
+      <button class="btn-save" onclick="saveSettings()">Salvar Configurações</button>
+    </div>
+  </div>
+</div>
 
 <!-- GASTO MODAL -->
 <div class="modal-overlay" id="gasto-modal">
@@ -790,6 +912,7 @@ function showView(v) {
   if (v === 'inventory') renderInventory();
   if (v === 'relatorios') renderRelatorios();
   if (v === 'metas') renderMetas();
+  if (v === 'gastos') renderGastos();
 }
 function showLoading(msg) {
   const el = document.getElementById('loading-overlay');
@@ -903,23 +1026,25 @@ async function renderDashboard() {
   const maxVal = Math.max(...monthKeys.map(k => byMonth[k].lucro), 1);
   const minVal = Math.min(...monthKeys.map(k => byMonth[k].lucro), 0);
   const range = maxVal - minVal || 1;
-  const chartH = 140;
+  const chartH = 100;
 
   if (monthKeys.length > 0) {
     const bars = monthKeys.map(k => {
       const { lucro, count } = byMonth[k];
       const [y, m] = k.split('-');
       const label = `${monthNames[m]}/${y.slice(2)}`;
-      const barH = Math.max(((lucro - minVal) / range * chartH), 4).toFixed(1);
-      const color = lucro >= 0 ? 'var(--green)' : 'var(--red)';
+      const barH = Math.max((lucro - minVal) / range * chartH, 4).toFixed(1);
+      const isCur = k === new Date().toISOString().slice(0,7);
+      const colorSolid = lucro >= 0 ? '#1a6b35' : '#c0392b';
+      const colorDim   = lucro >= 0 ? '#a8d5b5' : '#f0a89e';
+      const barColor   = isCur ? colorSolid : colorDim;
+      const hoverColor = colorSolid;
       const valLabel = (lucro >= 0 ? '+' : '') + lucro.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
       return `
         <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
-          <div style="height:${chartH}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:100%">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:${color};white-space:nowrap;margin-bottom:3px;text-align:center;width:100%;overflow:hidden;text-overflow:ellipsis;padding:0 2px" title="${fmt(lucro)}">${valLabel}</div>
-            <div title="${label}: ${fmt(lucro)} (${count} vendas)" style="width:calc(100% - 4px);height:${barH}px;background:${color};border-radius:4px 4px 0 0;opacity:.9;transition:opacity .15s;cursor:default" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.9"></div>
-          </div>
-          <div style="font-size:10px;color:var(--text3);white-space:nowrap;margin-top:5px;text-align:center">${label}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:${colorSolid};white-space:nowrap;margin-bottom:4px;text-align:center" title="${fmt(lucro)}">${valLabel}</div>
+          <div title="${label}: ${fmt(lucro)} (${count} vendas)" style="width:100%;height:${barH}px;background:${barColor};border-radius:4px 4px 0 0;transition:background .15s;cursor:default" onmouseover="this.style.background='${hoverColor}'" onmouseout="this.style.background='${barColor}'"></div>
+          <div style="font-size:10px;color:${isCur ? colorSolid : 'var(--text3)'};white-space:nowrap;margin-top:6px;text-align:center;font-weight:${isCur?'600':'400'}">${label}</div>
           <div style="font-size:9px;color:var(--text3);text-align:center">${count}v</div>
         </div>`;
     }).join('');
@@ -988,7 +1113,7 @@ async function renderDashboard() {
   `).join('') || '<div style="color:var(--text3);font-size:13px;padding-top:12px">Nenhuma venda registrada</div>';
 
   // ── 8. Recentes sem venda ─────────────────────────────────────────────────
-  const recent = [...emEstoque].sort((a,b) => (b.dataCompra||'').localeCompare(a.dataCompra||'')).slice(0,8);
+  const recent = [...emEstoque].sort((a,b) => (b.dataCompra||'').localeCompare(a.dataCompra||'')).slice(0,10);
   document.getElementById('recent-estoque').innerHTML = recent.map(d => `
     <div class="top-row">
       <div class="item-name">${d.item}</div>
@@ -996,25 +1121,8 @@ async function renderDashboard() {
     </div>
   `).join('') || '<div style="color:var(--text3);font-size:13px;padding-top:12px">Estoque vazio</div>';
 
-  // ── 9. Gastos operacionais ────────────────────────────────────────────────
-  const fmtG = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-  document.getElementById('gastos-total').textContent = `Total: ${fmtG(totalGastos)}`;
-  const catColors = { 'Embalagem': '#448aff', 'Marketing': '#ff9800', 'Personalização': '#ce93d8', 'Ferramentas': '#ffd600', 'Outros': '#888' };
-  const sortedGastos = [...gastos].sort((a,b) => (b.data||'').localeCompare(a.data||''));
-  document.getElementById('gastos-list').innerHTML = sortedGastos.length ? `
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
-      ${sortedGastos.map(g => `
-        <div onclick="openGastoModal('${g.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-            <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:${catColors[g.categoria]||'#888'}22;color:${catColors[g.categoria]||'#888'}">${g.categoria||'Outros'}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--yellow)">${fmtG(g.valor||0)}</span>
-          </div>
-          <div style="font-size:13px;font-weight:500;color:var(--text)">${g.descricao}</div>
-          ${g.data ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace">${g.data.split('-').reverse().join('/')}</div>` : ''}
-        </div>
-      `).join('')}
-    </div>
-  ` : '<div style="color:var(--text3);font-size:13px;padding:12px 0">Nenhum gasto registrado ainda.</div>';
+  // ── 9. Gastos operacionais (widget mensal) ────────────────────────────────
+  await renderDashGastos(gastos);
 }
 
 // INVENTORY
@@ -1115,6 +1223,7 @@ function goPage(p) {
 // MODAL
 async function openModal(id) {
   editingId = id || null;
+  await applyConfig(); // garante selects atualizados
   const data = await getData();
   const item = id ? data.find(d => d.id === id) : null;
   
@@ -1211,6 +1320,7 @@ async function deleteItem() {
 // GASTO MODAL
 async function openGastoModal(id) {
   editingGastoId = id || null;
+  await applyConfig(); // garante selects de categoria atualizados
   const gastos = await getGastos();
   const gasto = id ? gastos.find(g => g.id === id) : null;
   document.getElementById('gasto-modal-title').textContent = gasto ? 'Editar Gasto' : 'Novo Gasto Operacional';
@@ -1255,7 +1365,9 @@ async function saveGasto() {
     await saveGastoDB(newGasto);
     showToast(editingGastoId ? 'Gasto atualizado!' : 'Gasto registrado!', 'success');
     closeGastoModal();
-    await renderDashboard();
+    const activeView = document.querySelector('.view.active')?.id;
+    if (activeView === 'view-gastos') await renderGastos();
+    else await renderDashboard();
   } catch(e) { showToast('Erro ao salvar gasto.', 'error'); console.error(e); }
   finally { hideLoading(); }
 }
@@ -1268,7 +1380,9 @@ async function deleteGasto() {
     await deleteGastoDb(editingGastoId);
     closeGastoModal();
     showToast('Gasto excluído', 'error');
-    await renderDashboard();
+    const activeView2 = document.querySelector('.view.active')?.id;
+    if (activeView2 === 'view-gastos') await renderGastos();
+    else await renderDashboard();
   } catch(e) { showToast('Erro ao excluir gasto.', 'error'); console.error(e); }
   finally { hideLoading(); }
 }
@@ -1529,8 +1643,8 @@ async function renderMetas() {
   const cards = Object.entries(metas).sort((a,b) => b[0].localeCompare(a[0])).map(([mes, metaValor]) => {
     const [ano, m] = mes.split('-');
     const monthNames = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
-    const vendidos = data.filter(d => d.dataVenda && d.dataVenda.startsWith(mes) && d.vendaLiquida != null && d.paguei != null);
-    const lucroMes = vendidos.reduce((s,d) => s+((d.vendaLiquida||0)-(d.paguei||0)), 0);
+    const vendidos = data.filter(d => d.dataVenda && d.dataVenda.startsWith(mes) && d.vendaLiquida != null);
+    const lucroMes = vendidos.reduce((s,d) => s + getLucro(d), 0);
     const gastosMes = gastos.filter(g => g.data && g.data.startsWith(mes)).reduce((s,g) => s+(g.valor||0), 0);
     const lucroLiq = lucroMes - gastosMes;
     const pct = Math.min(lucroLiq / metaValor * 100, 100);
@@ -1575,6 +1689,416 @@ async function deletarMeta(mes) {
   _metasCache = null;
   await renderMetas();
   showToast('Meta removida', 'error');
+}
+
+// ── WIDGET GASTOS NO DASHBOARD ────────────────────────────────────────────────
+async function renderDashGastos(gastos) {
+  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const mesAtual = new Date().toISOString().slice(0,7);
+  const monthNames = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
+  const catColors = {'Embalagem':'#448aff','Marketing':'#ff9800','Personalizações':'#ce93d8','Ferramentas':'#ffd600','Outros':'#888'};
+
+  // Agrupa por mês
+  const byMonth = {};
+  gastos.forEach(g => {
+    if (!g.data) return;
+    const key = g.data.slice(0,7);
+    if (!byMonth[key]) byMonth[key] = 0;
+    byMonth[key] += g.valor || 0;
+  });
+
+  const monthKeys = Object.keys(byMonth).sort();
+  if (monthKeys.length === 0) {
+    document.getElementById('dash-gastos-chart').innerHTML = '<div style="color:var(--text3);font-size:13px;padding-top:12px">Nenhum gasto com data registrada.</div>';
+    return;
+  }
+
+  const totalAcumulado = gastos.reduce((s,g) => s+(g.valor||0), 0);
+  const totalMesAtual = gastos.filter(g => g.data && g.data.startsWith(mesAtual)).reduce((s,g) => s+(g.valor||0), 0);
+  document.getElementById('dash-gastos-total').textContent = fmt(totalAcumulado);
+  document.getElementById('dash-gastos-mes').textContent = fmt(totalMesAtual);
+
+  // Gráfico
+  const maxVal = Math.max(...monthKeys.map(k => byMonth[k]), 1);
+  const chartH = 100;
+  const bars = monthKeys.map(k => {
+    const val = byMonth[k];
+    const [y, m] = k.split('-');
+    const label = `${monthNames[m]}/${y.slice(2)}`;
+    const barH = Math.max((val / maxVal * chartH), 4).toFixed(1);
+    const isCur = k === mesAtual;
+    const color = isCur ? 'var(--yellow)' : 'var(--yellow-dim)';
+    const borderColor = isCur ? 'var(--yellow)' : 'transparent';
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+        <div style="height:${chartH}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:100%">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--yellow);white-space:nowrap;margin-bottom:3px;text-align:center;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 2px">${val > 0 ? 'R$'+Math.round(val) : ''}</div>
+          <div title="${label}: ${fmt(val)}" style="width:calc(100% - 4px);height:${barH}px;background:${color};border:1px solid ${borderColor};border-radius:4px 4px 0 0;transition:opacity .15s;cursor:default" onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'"></div>
+        </div>
+        <div style="font-size:10px;color:${isCur ? 'var(--yellow)' : 'var(--text3)'};white-space:nowrap;margin-top:5px;text-align:center;font-weight:${isCur?'600':'400'}">${label}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('dash-gastos-chart').innerHTML = bars;
+
+  // Mini breakdown de categorias
+  const byCat = {};
+  gastos.forEach(g => { byCat[g.categoria||'Outros'] = (byCat[g.categoria||'Outros']||0) + (g.valor||0); });
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  document.getElementById('dash-gastos-categorias').innerHTML = catEntries.map(([cat, val]) => {
+    const pct = totalAcumulado > 0 ? (val/totalAcumulado*100).toFixed(0) : 0;
+    const color = catColors[cat] || '#888';
+    return `
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--text2)">${cat}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${pct}%</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── ABA GASTOS COMPLETA ───────────────────────────────────────────────────────
+async function renderGastos() {
+  const gastos = await getGastos();
+  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const monthNames = {'01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun','07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'};
+  const catColors = {'Embalagem':'#448aff','Marketing':'#ff9800','Personalizações':'#ce93d8','Ferramentas':'#ffd600','Outros':'#888'};
+
+  // Popula select de ano
+  const anos = [...new Set(gastos.filter(g=>g.data).map(g=>g.data.slice(0,4)))].sort().reverse();
+  const anoSel = document.getElementById('gastos-ano-sel');
+  const anoAtual = new Date().getFullYear().toString();
+  if (anoSel.options.length === 0) {
+    anos.forEach(a => { const o = new Option(a, a); anoSel.add(o); });
+    if (!anos.includes(anoAtual) && gastos.length > 0) { const o = new Option(anoAtual, anoAtual); anoSel.insertBefore(o, anoSel.firstChild); }
+    anoSel.value = anoAtual;
+  }
+  const anoFiltro = anoSel.value || anoAtual;
+  const gastosAno = gastos.filter(g => g.data && g.data.startsWith(anoFiltro));
+  const mesAtual = new Date().toISOString().slice(0,7);
+
+  // KPIs
+  const totalAno = gastosAno.reduce((s,g) => s+(g.valor||0), 0);
+  const totalMes = gastos.filter(g => g.data && g.data.startsWith(mesAtual)).reduce((s,g) => s+(g.valor||0), 0);
+  const ticketMedio = gastosAno.length > 0 ? totalAno / gastosAno.length : 0;
+  const byCatKpi = {};
+  gastosAno.forEach(g => { byCatKpi[g.categoria||'Outros'] = (byCatKpi[g.categoria||'Outros']||0)+(g.valor||0); });
+  const topCat = Object.entries(byCatKpi).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('gastos-kpis').innerHTML = `
+    <div class="kpi yellow">
+      <div class="kpi-label">Total ${anoFiltro}</div>
+      <div class="kpi-value yellow">${fmt(totalAno)}</div>
+      <div class="kpi-sub">${gastosAno.length} lançamentos</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Mês Atual</div>
+      <div class="kpi-value yellow">${fmt(totalMes)}</div>
+      <div class="kpi-sub">${gastos.filter(g => g.data && g.data.startsWith(mesAtual)).length} lançamentos</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Ticket Médio por Gasto</div>
+      <div class="kpi-value blue">${fmt(ticketMedio)}</div>
+      <div class="kpi-sub">Média do período selecionado</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Categoria que Mais Pesou</div>
+      <div class="kpi-value red" style="font-size:22px">${topCat ? topCat[0] : '—'}</div>
+      <div class="kpi-sub">${topCat ? fmt(topCat[1]) + ' · ' + (totalAno > 0 ? (topCat[1]/totalAno*100).toFixed(0) : 0) + '% do total' : 'Nenhum gasto'}</div>
+    </div>
+  `;
+
+  // Gráfico mensal completo
+  const byMonth = {};
+  gastosAno.forEach(g => {
+    if (!g.data) return;
+    const key = g.data.slice(0,7);
+    if (!byMonth[key]) byMonth[key] = { total: 0, cats: {} };
+    byMonth[key].total += g.valor||0;
+    const cat = g.categoria||'Outros';
+    byMonth[key].cats[cat] = (byMonth[key].cats[cat]||0) + (g.valor||0);
+  });
+  const monthKeys = Object.keys(byMonth).sort();
+  const maxVal = Math.max(...monthKeys.map(k => byMonth[k].total), 1);
+  const chartH = 120;
+  const bars = monthKeys.length > 0 ? monthKeys.map(k => {
+    const { total } = byMonth[k];
+    const [y, m] = k.split('-');
+    const label = `${monthNames[m]}/${y.slice(2)}`;
+    const barH = Math.max((total/maxVal*chartH), 4).toFixed(1);
+    const isCur = k === mesAtual;
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+        <div style="height:${chartH}px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:100%">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--yellow);white-space:nowrap;margin-bottom:3px;text-align:center;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 2px">${fmt(total)}</div>
+          <div title="${label}: ${fmt(total)}" style="width:calc(100% - 4px);height:${barH}px;background:${isCur?'var(--yellow)':'#b07d0044'};border:1px solid ${isCur?'var(--yellow)':'transparent'};border-radius:4px 4px 0 0;transition:background .15s;cursor:default" onmouseover="this.style.background='var(--yellow)'" onmouseout="this.style.background='${isCur?'var(--yellow)':'#b07d0044'}'"></div>
+        </div>
+        <div style="font-size:10px;color:${isCur?'var(--yellow)':'var(--text3)'};white-space:nowrap;margin-top:5px;text-align:center;font-weight:${isCur?'600':'400'}">${label}</div>
+        <div style="font-size:9px;color:var(--text3);text-align:center">${(byMonth[k].cats ? Object.values(byMonth[k].cats).reduce((s,v)=>s+(v>0?1:0),0) : 0)}g</div>
+      </div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:13px;padding-top:12px">Nenhum gasto com data no período.</div>';
+  document.getElementById('gastos-chart-full').innerHTML = bars;
+
+  // Breakdown por categoria
+  const byCat = {};
+  gastosAno.forEach(g => { byCat[g.categoria||'Outros'] = (byCat[g.categoria||'Outros']||0)+(g.valor||0); });
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  const maxCat = catEntries[0]?.[1] || 1;
+  document.getElementById('gastos-cat-breakdown').innerHTML = catEntries.length ? catEntries.map(([cat, val]) => {
+    const pct = totalAno > 0 ? (val/totalAno*100).toFixed(1) : 0;
+    const color = catColors[cat] || '#888';
+    const count = gastosAno.filter(g => (g.categoria||'Outros') === cat).length;
+    return `
+      <div class="canal-row" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;width:130px;flex-shrink:0">
+          <div style="width:8px;height:8px;border-radius:50%;background:${color}"></div>
+          <span class="canal-name" style="width:auto">${cat}</span>
+        </div>
+        <div class="canal-bar-wrap"><div class="canal-bar" style="width:${(val/maxCat*100).toFixed(1)}%;background:${color}"></div></div>
+        <div style="text-align:right;min-width:80px">
+          <div class="canal-val">${fmt(val)}</div>
+          <div style="font-size:10px;color:var(--text3)">${pct}% · ${count}x</div>
+        </div>
+      </div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:13px">Nenhum gasto no período.</div>';
+
+  // Select de mês para top gastos
+  const mesesSel = document.getElementById('gastos-mes-sel');
+  const mesesDisponiveis = [...new Set(gastosAno.filter(g=>g.data).map(g=>g.data.slice(0,7)))].sort().reverse();
+  const mesesFiltroSel = document.getElementById('gastos-filtro-mes');
+  // Só repopula se mudou o ano
+  if (mesesSel.dataset.ano !== anoFiltro) {
+    mesesSel.dataset.ano = anoFiltro;
+    mesesSel.innerHTML = '<option value="">Ano todo</option>';
+    mesesDisponiveis.forEach(m => { const [y,mo] = m.split('-'); mesesSel.add(new Option(`${monthNames[mo]}/${y.slice(2)}`, m)); });
+    mesesFiltroSel.innerHTML = '<option value="">Todos os meses</option>';
+    mesesDisponiveis.forEach(m => { const [y,mo] = m.split('-'); mesesFiltroSel.add(new Option(`${monthNames[mo]}/${y.slice(2)}`, m)); });
+  }
+
+  renderGastosTopLista(gastosAno, fmt, catColors);
+  renderGastosLista();
+}
+
+function renderGastosTopLista(gastosAno, fmt, catColors) {
+  const catC = catColors || {'Embalagem':'#448aff','Marketing':'#ff9800','Personalizações':'#ce93d8','Ferramentas':'#ffd600','Outros':'#888'};
+  const f = fmt || (v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2}));
+  const mesFiltro = document.getElementById('gastos-mes-sel')?.value || '';
+  const lista = mesFiltro ? gastosAno.filter(g => g.data && g.data.startsWith(mesFiltro)) : gastosAno;
+  const top = [...lista].sort((a,b) => (b.valor||0)-(a.valor||0)).slice(0,8);
+  document.getElementById('gastos-top-list').innerHTML = top.length ? top.map(g => {
+    const color = catC[g.categoria||'Outros'] || '#888';
+    return `
+      <div class="top-row" style="cursor:pointer" onclick="openGastoModal('${g.id}')">
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${g.descricao}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">${g.data ? g.data.split('-').reverse().join('/') : '—'} · <span style="color:${color}">${g.categoria||'Outros'}</span></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--yellow);flex-shrink:0">${f(g.valor||0)}</div>
+      </div>`;
+  }).join('') : '<div style="color:var(--text3);font-size:13px;padding-top:12px">Nenhum gasto no período.</div>';
+}
+
+async function renderGastosLista() {
+  const gastos = await getGastos();
+  const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const catColors = {'Embalagem':'#448aff','Marketing':'#ff9800','Personalizações':'#ce93d8','Ferramentas':'#ffd600','Outros':'#888'};
+  const catFiltro = document.getElementById('gastos-filtro-cat')?.value || '';
+  const mesFiltro = document.getElementById('gastos-filtro-mes')?.value || '';
+  const anoFiltro = document.getElementById('gastos-ano-sel')?.value || new Date().getFullYear().toString();
+
+  let lista = gastos.filter(g => g.data && g.data.startsWith(anoFiltro));
+  if (catFiltro) lista = lista.filter(g => (g.categoria||'Outros') === catFiltro);
+  if (mesFiltro) lista = lista.filter(g => g.data && g.data.startsWith(mesFiltro));
+  lista = [...lista].sort((a,b) => (b.data||'').localeCompare(a.data||''));
+
+  const totalFiltrado = lista.reduce((s,g) => s+(g.valor||0), 0);
+  document.getElementById('gastos-count').textContent = `${lista.length} lançamentos · ${fmt(totalFiltrado)}`;
+
+  document.getElementById('gastos-lista-completa').innerHTML = lista.length ? `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px 12px;font-weight:500;border-bottom:1px solid var(--border)">Descrição</th>
+          <th style="text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px 12px;font-weight:500;border-bottom:1px solid var(--border)">Categoria</th>
+          <th style="text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px 12px;font-weight:500;border-bottom:1px solid var(--border)">Data</th>
+          <th style="text-align:right;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px 12px;font-weight:500;border-bottom:1px solid var(--border)">Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lista.map(g => {
+          const color = catColors[g.categoria||'Outros'] || '#888';
+          return `<tr style="border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" onclick="openGastoModal('${g.id}')">
+            <td style="padding:12px;font-size:13px;font-weight:500">${g.descricao}</td>
+            <td style="padding:12px"><span style="font-size:11px;padding:3px 8px;border-radius:4px;background:${color}22;color:${color}">${g.categoria||'Outros'}</span></td>
+            <td style="padding:12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${g.data ? g.data.split('-').reverse().join('/') : '—'}</td>
+            <td style="padding:12px;font-family:'DM Mono',monospace;font-size:13px;color:var(--yellow);text-align:right">${fmt(g.valor||0)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : '<div style="color:var(--text3);font-size:13px;padding:20px 0">Nenhum lançamento encontrado.</div>';
+}
+
+// ── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
+const DEFAULT_CANAIS = ['Instagram','Facebook','Enjoei','Whatsapp','Meiuka','Dado em troca'];
+const DEFAULT_CATS   = ['Embalagem','Marketing','Ferramentas','Personalizações','Outros'];
+let _configCache = null;
+
+async function getConfig() {
+  if (_configCache) return _configCache;
+  try {
+    const rows = await sbGet('config');
+    const cfg = {};
+    (rows||[]).forEach(r => { try { cfg[r.chave] = JSON.parse(r.valor); } catch(e) { cfg[r.chave] = r.valor; } });
+
+    // Migra localStorage → Supabase se ainda não foi migrado
+    if (!cfg.migrated) {
+      const lsCanais = JSON.parse(localStorage.getItem('cfg_canais') || 'null');
+      const lsCats   = JSON.parse(localStorage.getItem('cfg_cats')   || 'null');
+      const lsNome   = localStorage.getItem('cfg_nomeLoja');
+      if (lsCanais) { await saveConfigKey('canais', lsCanais); cfg.canais = lsCanais; }
+      if (lsCats)   { await saveConfigKey('cats',   lsCats);   cfg.cats   = lsCats; }
+      if (lsNome)   { await saveConfigKey('nomeLoja', lsNome); cfg.nomeLoja = lsNome; }
+      await saveConfigKey('migrated', true);
+      localStorage.removeItem('cfg_canais');
+      localStorage.removeItem('cfg_cats');
+      localStorage.removeItem('cfg_nomeLoja');
+    }
+
+    _configCache = {
+      nomeLoja: cfg.nomeLoja || 'CASAMATA',
+      canais:   cfg.canais   || [...DEFAULT_CANAIS],
+      cats:     cfg.cats     || [...DEFAULT_CATS],
+    };
+  } catch(e) {
+    // Fallback: tabela config pode não existir ainda
+    _configCache = {
+      nomeLoja: localStorage.getItem('cfg_nomeLoja') || 'CASAMATA',
+      canais:   JSON.parse(localStorage.getItem('cfg_canais') || 'null') || [...DEFAULT_CANAIS],
+      cats:     JSON.parse(localStorage.getItem('cfg_cats')   || 'null') || [...DEFAULT_CATS],
+    };
+  }
+  return _configCache;
+}
+
+async function saveConfigKey(chave, valor) {
+  const strVal = JSON.stringify(valor);
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/config`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify({ chave, valor: strVal })
+    });
+  } catch(e) {
+    // Fallback para localStorage se tabela não existir
+    localStorage.setItem('cfg_' + chave, strVal);
+  }
+}
+
+async function applyConfig() {
+  const cfg = await getConfig();
+  // Nome da loja no header
+  const logoEl = document.querySelector('.logo');
+  if (logoEl) logoEl.textContent = cfg.nomeLoja;
+  // Atualiza selects de canal em todos os formulários
+  const selectsCanal = document.querySelectorAll('#f-canalVenda');
+  selectsCanal.forEach(sel => {
+    const val = sel.value;
+    sel.innerHTML = '<option value="">—</option>' + cfg.canais.map(c => `<option value="${c}"${c===val?' selected':''}>${c}</option>`).join('');
+  });
+  // Atualiza selects de categoria de gasto
+  const selectsCat = document.querySelectorAll('#g-categoria, #gastos-filtro-cat');
+  selectsCat.forEach(sel => {
+    const val = sel.value;
+    const extras = sel.id === 'gastos-filtro-cat' ? '<option value="">Todas as categorias</option>' : '';
+    sel.innerHTML = extras + cfg.cats.map(c => `<option value="${c}"${c===val?' selected':''}>${c}</option>`).join('');
+  });
+}
+
+let _cfgCanaisTemp = [];
+let _cfgCatsTemp   = [];
+
+async function openSettings() {
+  const cfg = await getConfig();
+  _cfgCanaisTemp = [...cfg.canais];
+  _cfgCatsTemp   = [...cfg.cats];
+  document.getElementById('cfg-nome-loja').value = cfg.nomeLoja;
+  renderSettingsTags();
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function renderSettingsTags() {
+  const renderTags = (containerId, list, isCanal) => {
+    document.getElementById(containerId).innerHTML = list.map((item, i) => {
+      const isDefault = isCanal ? DEFAULT_CANAIS.includes(item) : DEFAULT_CATS.includes(item);
+      return `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px">
+        <span>${item}</span>
+        ${!isDefault ? `<button onclick="${isCanal ? 'removerCanal' : 'removerCategoria'}(${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;line-height:1;padding:0" title="Remover">×</button>` : '<span style="font-size:10px;color:var(--text3)" title="Item padrão">🔒</span>'}
+      </div>`;
+    }).join('');
+  };
+  renderTags('cfg-canais-list', _cfgCanaisTemp, true);
+  renderTags('cfg-cats-list',   _cfgCatsTemp,   false);
+}
+
+function adicionarCanal() {
+  const inp = document.getElementById('cfg-novo-canal');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (_cfgCanaisTemp.map(c=>c.toLowerCase()).includes(val.toLowerCase())) { showToast('Canal já existe', 'error'); return; }
+  _cfgCanaisTemp.push(val);
+  inp.value = '';
+  renderSettingsTags();
+}
+
+function adicionarCategoria() {
+  const inp = document.getElementById('cfg-nova-cat');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (_cfgCatsTemp.map(c=>c.toLowerCase()).includes(val.toLowerCase())) { showToast('Categoria já existe', 'error'); return; }
+  _cfgCatsTemp.push(val);
+  inp.value = '';
+  renderSettingsTags();
+}
+
+function removerCanal(i) {
+  _cfgCanaisTemp.splice(i, 1);
+  renderSettingsTags();
+}
+
+function removerCategoria(i) {
+  _cfgCatsTemp.splice(i, 1);
+  renderSettingsTags();
+}
+
+async function saveSettings() {
+  const nome = document.getElementById('cfg-nome-loja').value.trim() || 'CASAMATA';
+  showLoading('Salvando configurações...');
+  try {
+    await saveConfigKey('nomeLoja', nome);
+    await saveConfigKey('canais',   _cfgCanaisTemp);
+    await saveConfigKey('cats',     _cfgCatsTemp);
+    _configCache = { nomeLoja: nome, canais: _cfgCanaisTemp, cats: _cfgCatsTemp };
+    await applyConfig();
+    closeSettings();
+    showToast('Configurações salvas!', 'success');
+  } catch(e) {
+    showToast('Erro ao salvar configurações.', 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 // TOAST
@@ -1632,6 +2156,7 @@ function initRealtime() {
             const activeView = document.querySelector('.view.active')?.id;
             if (activeView === 'view-dashboard') renderDashboard();
             else if (activeView === 'view-inventory') renderInventory();
+            else if (activeView === 'view-gastos') renderGastos();
           }
         }
       } catch(err) {}
@@ -1653,6 +2178,7 @@ function initRealtime() {
 (async () => {
   showLoading("Conectando ao banco de dados...");
   await renderDashboard();
+  await applyConfig();
   hideLoading();
   initRealtime();
 })();
