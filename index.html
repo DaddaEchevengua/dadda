@@ -163,6 +163,34 @@
   .lucro-neg { color: var(--red); font-family: 'DM Mono', monospace; font-size: 12px; }
   .lucro-na { color: var(--text3); font-family: 'DM Mono', monospace; font-size: 12px; }
 
+  /* TROCAS */
+  .troca-chip {
+    display:flex; align-items:center; gap:10px; background:var(--surface2);
+    border:1px solid var(--border); border-radius:10px; padding:10px 12px; cursor:pointer;
+    transition:border .15s;
+  }
+  .troca-chip:hover { border-color: var(--green); }
+  .troca-chip .tc-icon { font-size:15px; color:var(--green); flex-shrink:0; }
+  .troca-chip .tc-main { flex:1; min-width:0; }
+  .troca-chip .tc-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .troca-chip .tc-sub { font-size:11px; color:var(--text3); margin-top:2px; }
+  .troca-chip .tc-val { font-family:'DM Mono',monospace; font-size:12px; color:var(--green); white-space:nowrap; }
+  .troca-chip .tc-x {
+    background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; padding:2px 4px; line-height:1;
+  }
+  .troca-chip .tc-x:hover { color: var(--red); }
+  .troca-tag {
+    display:inline-flex; align-items:center; gap:6px; background:var(--green-dim); color:var(--green);
+    border:1px solid var(--green); border-radius:999px; padding:5px 12px; font-size:12px; font-weight:500;
+    cursor:pointer; margin-bottom:20px;
+  }
+  .troca-resumo {
+    margin-top:12px; background:var(--surface2); border-radius:10px; padding:12px 14px;
+    font-size:12px; color:var(--text2); display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline;
+  }
+  .troca-resumo b { font-family:'DM Mono',monospace; color:var(--text); font-weight:500; }
+  .inv-troca { font-size:11px; color:var(--green); margin-top:2px; }
+
   /* MODAL */
   .modal-overlay {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8);
@@ -571,6 +599,7 @@
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <form id="item-form" onsubmit="saveItem(event)">
+      <div id="troca-origem-tag"></div>
       <div class="form-section">
         <div class="form-section-title">Identificação</div>
         <div class="form-grid">
@@ -640,7 +669,7 @@
           </div>
           <div class="form-group">
             <label>Data da Venda</label>
-            <input type="date" id="f-dataVenda">
+            <input type="date" id="f-dataVenda" onchange="updateTrocaSection()" oninput="updateTrocaSection()">
           </div>
           <div class="form-group">
             <label>Canal de Venda</label>
@@ -656,20 +685,84 @@
           </div>
           <div class="form-group"></div>
           <div class="form-group">
-            <label>Venda Bruta (R$)</label>
+            <label id="lbl-vendaBruta">Venda Bruta (R$)</label>
             <input type="number" id="f-vendaBruta" step="0.01" min="0" placeholder="0.00">
           </div>
           <div class="form-group">
-            <label>Venda Líquida (R$)</label>
-            <input type="number" id="f-vendaLiquida" step="0.01" min="0" placeholder="0.00">
+            <label id="lbl-vendaLiquida">Venda Líquida (R$)</label>
+            <input type="number" id="f-vendaLiquida" step="0.01" min="0" placeholder="0.00" oninput="renderTrocaSection()">
           </div>
         </div>
+      </div>
+
+      <!-- SEÇÃO DE TROCAS -->
+      <div class="form-section" id="troca-section" style="display:none">
+        <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Camisas Recebidas em Troca</span>
+          <button type="button" onclick="openTrocaModal()" style="background:var(--green);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;letter-spacing:.5px">+ Adicionar Camisa</button>
+        </div>
+        <div id="troca-list" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+        <div id="troca-empty" style="font-size:12px;color:var(--text3);padding:4px 0">Recebeu camisas como parte do pagamento? Adicione cada uma com o valor pelo qual você a pegou.</div>
+        <div id="troca-resumo"></div>
       </div>
     </form>
     <div class="modal-footer">
       <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteItem()">Excluir</button>
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save" onclick="saveItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CAMISA RECEBIDA EM TROCA -->
+<div class="modal-overlay" id="troca-modal">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <div class="modal-title" id="troca-modal-title">Camisa Recebida em Troca</div>
+      <button class="modal-close" onclick="closeTrocaModal()">✕</button>
+    </div>
+    <div id="troca-modal-origem" style="font-size:12px;color:var(--text2);margin:-14px 0 22px"></div>
+    <div class="form-section">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nome da Peça *</label>
+          <input type="text" id="t-item" placeholder="ex: Camisa Inter 2006">
+        </div>
+        <div class="form-group">
+          <label>Ano</label>
+          <input type="number" id="t-ano" min="1900" max="2099" placeholder="ex: 2006">
+        </div>
+        <div class="form-group">
+          <label>Tamanho</label>
+          <select id="t-tamanho">
+            <option value="">—</option>
+            <option value="PP">PP</option><option value="P">P</option><option value="M">M</option>
+            <option value="G">G</option><option value="GG">GG</option><option value="XGG">XGG</option>
+            <option value="Único">Único</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Valor pego na troca (R$) *</label>
+          <input type="number" id="t-valor" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label>Expectativa de Venda (R$)</label>
+          <input type="number" id="t-expectativa" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="form-group full">
+          <label>Status / Localização</label>
+          <select id="t-ondeEsta">
+            <option value="Estoque">Estoque</option>
+            <option value="Com o vendedor">Com o vendedor</option>
+            <option value="Logística">Logística</option>
+          </select>
+        </div>
+      </div>
+      <div id="troca-modal-sugestao" style="font-size:12px;color:var(--text3);margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeTrocaModal()">Cancelar</button>
+      <button class="btn-save" onclick="confirmTroca()">Adicionar à venda</button>
     </div>
   </div>
 </div>
@@ -775,6 +868,7 @@ const SUPABASE_KEY = 'sb_publishable_tTf2bShA7OhTcRujEp5VtA_xb31SBib';
 
 let editingId = null;
 let editingGastoId = null;
+let _trocaRows = []; // [{nome, ano, tamanho, expectativa}]
 let sortField = 'dataCompra';
 let sortAsc = false;
 let currentPage = 1;
@@ -818,8 +912,11 @@ function pecaToRow(d) {
     expectativa_venda: d.expectativaVenda||null,
     data_anuncio: d.dataAnuncio||null, data_venda: d.dataVenda||null,
     canal_venda: d.canalVenda||null,
-    venda_bruta: d.vendaBruta!=null?d.vendaBruta:null,
-    venda_liquida: d.vendaLiquida!=null?d.vendaLiquida:null,
+    // No banco fica só o valor em DINHEIRO; o valor das trocas é somado na leitura (aplicarTrocas)
+    venda_bruta: ('vendaBrutaDinheiro' in d ? d.vendaBrutaDinheiro : d.vendaBruta) ?? null,
+    venda_liquida: ('vendaDinheiro' in d ? d.vendaDinheiro : d.vendaLiquida) ?? null,
+    // só envia o vínculo quando existe, para não quebrar gravações se a coluna ainda não foi criada
+    ...(d.trocaDe ? { troca_de: d.trocaDe } : {}),
   };
 }
 function rowToPeca(r) {
@@ -830,6 +927,7 @@ function rowToPeca(r) {
     paguei: r.paguei, expectativaVenda: r.expectativa_venda,
     dataAnuncio: r.data_anuncio, dataVenda: r.data_venda,
     canalVenda: r.canal_venda, vendaBruta: r.venda_bruta, vendaLiquida: r.venda_liquida,
+    trocaDe: r.troca_de || null,
   };
 }
 function gastoToRow(g) {
@@ -843,11 +941,32 @@ const INITIAL_DATA = [{"item":"camisa grêmio 1995","dataCompra":"2025-11-01","d
 let _pecasCache = null;
 let _gastosCache = null;
 
+// Soma o valor das camisas recebidas em troca na venda da peça original.
+// vendaDinheiro / vendaBrutaDinheiro guardam o que está no banco (só dinheiro);
+// vendaLiquida / vendaBruta passam a ser o TOTAL (dinheiro + trocas), usado em todos os cálculos.
+function aplicarTrocas(list) {
+  const porOrigem = {};
+  list.forEach(d => { if (d.trocaDe) (porOrigem[d.trocaDe] = porOrigem[d.trocaDe] || []).push(d); });
+  list.forEach(d => {
+    d.vendaDinheiro = d.vendaLiquida;
+    d.vendaBrutaDinheiro = d.vendaBruta;
+    d.trocasRecebidas = porOrigem[d.id] || [];
+    d.valorTrocas = d.trocasRecebidas.reduce((s, t) => s + (t.paguei || 0), 0);
+    if (d.trocasRecebidas.length) {
+      d.vendaLiquida = (d.vendaDinheiro || 0) + d.valorTrocas;
+      if (d.vendaBruta != null) d.vendaBruta = d.vendaBruta + d.valorTrocas;
+    }
+    const origem = d.trocaDe ? list.find(o => o.id === d.trocaDe) : null;
+    d.origemTrocaNome = origem ? origem.item : null;
+  });
+  return list;
+}
+
 async function getData() {
   if (_pecasCache) return _pecasCache;
   try {
     const rows = await sbGet('pecas');
-    _pecasCache = rows.map(rowToPeca);
+    _pecasCache = aplicarTrocas(rows.map(rowToPeca));
     // Se banco vazio, faz seed dos dados iniciais
     if (_pecasCache.length === 0) {
       showToast('Importando dados iniciais para o banco...', 'success');
@@ -1186,7 +1305,7 @@ function renderTable() {
     const lucroHtml = lucro != null ? `<span class="${lucro >= 0 ? 'lucro-pos' : 'lucro-neg'}">${fmt(lucro)}</span>` : '<span class="lucro-na">—</span>';
     const meta = [d.ano, d.tamanho].filter(Boolean).join(' · ');
     return `<tr onclick="openModal('${d.id}')">
-      <td class="item-name">${d.item}${meta ? `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">${meta}</div>` : ''}</td>
+      <td class="item-name">${d.item}${meta ? `<div style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px">${meta}</div>` : ''}${d.trocaDe ? `<div class="inv-troca">⇄ troca por ${escAttr(d.origemTrocaNome || 'peça removida')}</div>` : ''}${d.trocasRecebidas && d.trocasRecebidas.length ? `<div class="inv-troca">⇄ ${d.trocasRecebidas.length} camisa${d.trocasRecebidas.length>1?'s':''} recebida${d.trocasRecebidas.length>1?'s':''} em troca</div>` : ''}</td>
       <td class="mono">${fmtDate(d.dataCompra)}</td>
       <td class="mono">${fmt(d.paguei)}</td>
       <td class="mono">${d.expectativaVenda ? fmt(d.expectativaVenda) : '—'}</td>
@@ -1223,6 +1342,129 @@ function goPage(p) {
   renderTable();
 }
 
+// ── TROCAS ──────────────────────────────────────────────────────────────────
+let _trocasSalvas = [];     // camisas já vinculadas a esta venda (vindas do banco)
+let _trocaEditIdx = null;   // índice em _trocaRows sendo editado no modal de troca
+
+function escAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+const fmtBRL = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+function totalTrocas() {
+  return _trocasSalvas.reduce((s,t) => s + (t.paguei||0), 0)
+       + _trocaRows.reduce((s,t) => s + (t.valor||0), 0);
+}
+
+function renderTrocaSection() {
+  const temTrocas = _trocasSalvas.length + _trocaRows.length > 0;
+  const dataVenda = document.getElementById('f-dataVenda').value;
+  document.getElementById('troca-section').style.display = (dataVenda || temTrocas) ? 'block' : 'none';
+  document.getElementById('lbl-vendaLiquida').textContent = temTrocas ? 'Venda Líquida em dinheiro (R$)' : 'Venda Líquida (R$)';
+  document.getElementById('lbl-vendaBruta').textContent = temTrocas ? 'Venda Bruta em dinheiro (R$)' : 'Venda Bruta (R$)';
+
+  const list = document.getElementById('troca-list');
+  const salvas = _trocasSalvas.map(t => `
+    <div class="troca-chip" onclick="abrirPecaVinculada('${t.id}')" title="Abrir esta camisa">
+      <span class="tc-icon">⇄</span>
+      <div class="tc-main">
+        <div class="tc-name">${escAttr(t.item)}</div>
+        <div class="tc-sub">${[t.ano, t.tamanho, t.ondeEsta].filter(Boolean).join(' · ')}${t.dataVenda ? ' · já vendida' : ''}</div>
+      </div>
+      <span class="tc-val">${fmtBRL(t.paguei)}</span>
+    </div>`).join('');
+  const pendentes = _trocaRows.map((t, i) => `
+    <div class="troca-chip" onclick="openTrocaModal(${i})" title="Editar">
+      <span class="tc-icon">⇄</span>
+      <div class="tc-main">
+        <div class="tc-name">${escAttr(t.item)}</div>
+        <div class="tc-sub">${[t.ano, t.tamanho].filter(Boolean).join(' · ')}${t.ano||t.tamanho ? ' · ' : ''}<span style="color:var(--yellow)">será criada ao salvar</span></div>
+      </div>
+      <span class="tc-val">${fmtBRL(t.valor)}</span>
+      <button type="button" class="tc-x" onclick="event.stopPropagation();removeTrocaRow(${i})" title="Remover">✕</button>
+    </div>`).join('');
+  list.innerHTML = salvas + pendentes;
+  document.getElementById('troca-empty').style.display = temTrocas ? 'none' : 'block';
+
+  const resumo = document.getElementById('troca-resumo');
+  if (!temTrocas) { resumo.innerHTML = ''; return; }
+  const dinheiro = parseFloat(document.getElementById('f-vendaLiquida').value) || 0;
+  const trocas = totalTrocas();
+  const total = dinheiro + trocas;
+  const custo = parseFloat(document.getElementById('f-paguei').value) || 0;
+  const expect = parseFloat(document.getElementById('f-expectativaVenda').value) || 0;
+  resumo.innerHTML = `<div class="troca-resumo">
+    <span>Dinheiro <b>${fmtBRL(dinheiro)}</b></span>
+    <span>+ Trocas <b>${fmtBRL(trocas)}</b></span>
+    <span>= Venda total <b style="color:var(--green)">${fmtBRL(total)}</b></span>
+    <span>Lucro <b style="color:${total-custo>=0?'var(--green)':'var(--red)'}">${fmtBRL(total - custo)}</b></span>
+    ${expect ? `<span>Expectativa <b>${fmtBRL(expect)}</b></span>` : ''}
+  </div>`;
+}
+
+function openTrocaModal(idx) {
+  _trocaEditIdx = (typeof idx === 'number') ? idx : null;
+  const t = _trocaEditIdx != null ? _trocaRows[_trocaEditIdx] : {};
+  document.getElementById('troca-modal-title').textContent = _trocaEditIdx != null ? 'Editar Camisa da Troca' : 'Camisa Recebida em Troca';
+  const nomeOrigem = document.getElementById('f-item').value.trim() || 'esta peça';
+  document.getElementById('troca-modal-origem').innerHTML = `Recebida como parte do pagamento de <b style="color:var(--text)">${escAttr(nomeOrigem)}</b>`;
+  document.getElementById('t-item').value = t.item || '';
+  document.getElementById('t-ano').value = t.ano || '';
+  document.getElementById('t-tamanho').value = t.tamanho || '';
+  document.getElementById('t-valor').value = t.valor != null ? t.valor : '';
+  document.getElementById('t-expectativa').value = t.expectativa != null ? t.expectativa : '';
+  document.getElementById('t-ondeEsta').value = t.ondeEsta || 'Estoque';
+
+  // Sugestão: quanto falta para chegar na expectativa da peça original
+  const expect = parseFloat(document.getElementById('f-expectativaVenda').value) || 0;
+  const dinheiro = parseFloat(document.getElementById('f-vendaLiquida').value) || 0;
+  const jaTrocas = totalTrocas() - (_trocaEditIdx != null ? (t.valor||0) : 0);
+  const falta = expect - dinheiro - jaTrocas;
+  document.getElementById('troca-modal-sugestao').innerHTML = expect && falta > 0
+    ? `Para chegar na expectativa de ${fmtBRL(expect)}, faltam <b style="color:var(--text)">${fmtBRL(falta)}</b> em trocas.`
+    : '';
+  document.getElementById('troca-modal').classList.add('open');
+  setTimeout(() => document.getElementById('t-item').focus(), 50);
+}
+
+function closeTrocaModal() {
+  document.getElementById('troca-modal').classList.remove('open');
+  _trocaEditIdx = null;
+}
+
+function confirmTroca() {
+  const item = document.getElementById('t-item').value.trim();
+  const valorStr = document.getElementById('t-valor').value;
+  if (!item) { showToast('Informe o nome da camisa', 'error'); return; }
+  if (valorStr === '') { showToast('Informe o valor pelo qual você pegou a camisa', 'error'); return; }
+  const t = {
+    item,
+    ano: document.getElementById('t-ano').value || '',
+    tamanho: document.getElementById('t-tamanho').value || '',
+    valor: parseFloat(valorStr) || 0,
+    expectativa: document.getElementById('t-expectativa').value !== '' ? parseFloat(document.getElementById('t-expectativa').value) : null,
+    ondeEsta: document.getElementById('t-ondeEsta').value,
+  };
+  if (_trocaEditIdx != null) _trocaRows[_trocaEditIdx] = t; else _trocaRows.push(t);
+  closeTrocaModal();
+  renderTrocaSection();
+}
+
+function removeTrocaRow(idx) {
+  _trocaRows.splice(idx, 1);
+  renderTrocaSection();
+}
+
+function abrirPecaVinculada(id) {
+  if (_trocaRows.length && !confirm('Há camisas de troca ainda não salvas nesta venda. Abrir outra peça vai descartá-las. Continuar?')) return;
+  closeModal();
+  openModal(id);
+}
+
+document.getElementById('troca-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeTrocaModal();
+});
+
 // MODAL
 async function openModal(id) {
   editingId = id || null;
@@ -1246,18 +1488,36 @@ async function openModal(id) {
     document.getElementById('f-dataAnuncio').value = item.dataAnuncio || '';
     document.getElementById('f-dataVenda').value = item.dataVenda || '';
     document.getElementById('f-canalVenda').value = item.canalVenda || '';
-    document.getElementById('f-vendaBruta').value = item.vendaBruta != null ? item.vendaBruta : '';
-    document.getElementById('f-vendaLiquida').value = item.vendaLiquida != null ? item.vendaLiquida : '';
+    const vb = 'vendaBrutaDinheiro' in item ? item.vendaBrutaDinheiro : item.vendaBruta;
+    const vl = 'vendaDinheiro' in item ? item.vendaDinheiro : item.vendaLiquida;
+    document.getElementById('f-vendaBruta').value = vb != null ? vb : '';
+    document.getElementById('f-vendaLiquida').value = vl != null ? vl : '';
   } else {
     document.getElementById('item-form').reset();
   }
   
+  // Trocas: camisas já vinculadas + etiqueta de origem
+  _trocaRows = [];
+  _trocasSalvas = item ? data.filter(d => d.trocaDe === item.id) : [];
+  const tag = document.getElementById('troca-origem-tag');
+  if (item && item.trocaDe) {
+    const origem = data.find(d => d.id === item.trocaDe);
+    tag.innerHTML = origem
+      ? `<span class="troca-tag" onclick="abrirPecaVinculada('${origem.id}')" title="Abrir a peça original">⇄ Recebida em troca por: ${escAttr(origem.item)}</span>`
+      : `<span class="troca-tag" style="cursor:default">⇄ Recebida em troca (peça original removida)</span>`;
+  } else tag.innerHTML = '';
+  renderTrocaSection();
+
   document.getElementById('modal').classList.add('open');
 }
+
+function updateTrocaSection() { renderTrocaSection(); }
 
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
   editingId = null;
+  _trocaRows = [];
+  _trocasSalvas = [];
 }
 
 document.getElementById('modal').addEventListener('click', function(e) {
@@ -1286,28 +1546,64 @@ async function saveItem() {
     vendaLiquida: document.getElementById('f-vendaLiquida').value ? parseFloat(document.getElementById('f-vendaLiquida').value) : null,
   };
   try {
+    let savedId;
     if (editingId) {
       newItem.id = editingId;
       await savePeca(newItem);
+      savedId = editingId;
       showToast('Peça atualizada com sucesso!', 'success');
     } else {
       newItem.id = 'item_' + Date.now();
       await savePeca(newItem);
+      savedId = newItem.id;
       showToast('Peça cadastrada com sucesso!', 'success');
     }
+
+    // Cria as camisas recebidas em troca, vinculadas a esta peça
+    if (_trocaRows.length > 0) {
+      const dataTroca = newItem.dataVenda || new Date().toLocaleDateString('sv-SE');
+      for (const t of _trocaRows) {
+        await savePeca({
+          id: 'item_troca_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+          item: t.item,
+          ano: t.ano ? parseInt(t.ano) : null,
+          tamanho: t.tamanho || null,
+          ondeEsta: t.ondeEsta || 'Estoque',
+          rastreio: null,
+          dataCompra: dataTroca,
+          dataRecebimento: dataTroca,
+          paguei: t.valor,                 // valor pego na troca = custo da camisa
+          expectativaVenda: t.expectativa,
+          dataAnuncio: null, dataVenda: null, canalVenda: null,
+          vendaBruta: null, vendaLiquida: null,
+          trocaDe: savedId,
+        });
+      }
+      showToast(`Venda salva + ${_trocaRows.length} camisa(s) de troca no estoque!`, 'success');
+    }
+
     closeModal();
+    _pecasCache = null; // força reload
     const activeView = document.querySelector('.view.active').id;
     if (activeView === 'view-dashboard') await renderDashboard();
     else await renderInventory();
   } catch(e) {
-    showToast('Erro ao salvar. Verifique a conexão.', 'error');
+    if (String(e && e.message).includes('troca_de')) {
+      showToast('Falta criar a coluna troca_de no Supabase (veja o SQL que te passei).', 'error');
+    } else {
+      showToast('Erro ao salvar. Verifique a conexão.', 'error');
+    }
     console.error(e);
   } finally { hideLoading(); }
 }
 
 async function deleteItem() {
   if (!editingId) return;
-  if (!confirm('Tem certeza que deseja excluir esta peça?')) return;
+  let aviso = 'Tem certeza que deseja excluir esta peça?';
+  const atual = (await getData()).find(d => d.id === editingId);
+  if (atual && atual.trocaDe && atual.origemTrocaNome) aviso += `\n\nEsta camisa entrou na troca por "${atual.origemTrocaNome}". A venda daquela peça vai diminuir ${fmtBRL(atual.paguei)}.`;
+  if (_trocasSalvas.length) aviso += `\n\nEla tem ${_trocasSalvas.length} camisa(s) recebida(s) em troca. Elas continuam no estoque, mas perdem o vínculo.`;
+  if (!confirm(aviso)) return;
   showLoading('Excluindo...');
   try {
     await deletePeca(editingId);
